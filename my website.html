@@ -1,0 +1,678 @@
+<!-- Smart Code Assistant – Final Version with Google Sign-In -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0d0d0d">
+  <title>Smart Code Assistant 🧓</title>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg-main: #0d0d0d;
+      --bg-panel-left: #1a1a1a;
+      --bg-panel-right: #121212;
+      --bg-box: #111;
+      --bg-chatbot: #1c1c1c;
+      --bg-chatuser: #2e2e2e;
+      --color-text: #eee;
+      --color-code: #0f0;
+      --color-bot: #0ff;
+      --color-button: #00cc66;
+      --color-border: #333;
+    }
+
+    .light-mode {
+      --bg-main: #f2f2f2;
+      --bg-panel-left: #ffffff;
+      --bg-panel-right: #f0f0f0;
+      --bg-box: #ffffff;
+      --bg-chatbot: #e0f7ff;
+      --bg-chatuser: #d2fdd2;
+      --color-text: #222;
+      --color-code: #006600;
+      --color-bot: #004466;
+      --color-button: #009966;
+      --color-border: #ccc;
+    }
+
+    * {
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100vh;
+      background: var(--bg-main);
+      color: var(--color-text);
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: row;
+    }
+
+    #leftPanel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      background: var(--bg-panel-left);
+      overflow-y: auto;
+    }
+
+    #rightPanel {
+      flex: 1;
+      padding: 1rem;
+      background: var(--bg-panel-right);
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid var(--color-border);
+      position: relative;
+    }
+
+    #inputBox, #codeEditorBox {
+      width: 100%;
+      font-size: 1rem;
+      padding: 1rem;
+      border-radius: 10px;
+      background: var(--bg-box);
+      color: var(--color-code);
+      border: 1px solid var(--color-border);
+      font-family: monospace;
+      margin-bottom: 10px;
+    }
+
+    #inputBox {
+      height: 10vh;
+      min-height: 60px;
+      resize: none;
+      box-shadow: 0 0 6px #0f03, inset 0 0 4px #060;
+    }
+
+    #codeEditorBox {
+      flex: 1;
+      resize: none;
+      overflow: auto;
+      min-height: 30vh;
+      max-height: 50vh;
+      background: #000;
+      box-shadow: inset 0 0 6px #060;
+    }
+
+    .ask-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .ask-box button {
+      height: 34px;
+      min-width: 34px;
+      padding: 0 10px;
+      font-size: 1.2rem;
+      background: var(--color-button);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .toggle-switch {
+      width: 70px;
+      height: 34px;
+      border-radius: 34px;
+      background: #444;
+      position: relative;
+      display: flex;
+      align-items: center;
+      transition: background 0.3s;
+      padding: 0 5px;
+    }
+
+    .toggle-switch.on {
+      background: var(--color-button);
+    }
+
+    .toggle-thumb {
+      width: 30px;
+      height: 30px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+      left: 2px;
+      transition: left 0.3s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .toggle-switch.on .toggle-thumb {
+      left: 38px;
+    }
+
+    .toggle-thumb img {
+      width: 20px;
+      height: 20px;
+    }
+
+    .chat-message {
+      max-width: 90%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    .chat-user {
+      background: var(--bg-chatuser);
+      color: var(--color-code);
+      align-self: flex-end;
+    }
+
+    .chat-bot {
+      background: var(--bg-chatbot);
+      color: var(--color-bot);
+      align-self: flex-start;
+    }
+
+    #chatBox {
+      flex: 1;
+      background: var(--bg-box);
+      border-radius: 10px;
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: 30vh;
+      box-shadow: inset 0 0 6px #0ff;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .chat-message img {
+      max-width: 200px;
+      max-height: 200px;
+      margin-top: 5px;
+      border-radius: 10px;
+      border: 1px solid var(--color-border);
+    }
+
+    #imagePreviewBox {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-height: 150px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+
+    .preview-img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+    }
+
+    iframe#outputBox {
+      flex: 1;
+      width: 100%;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      background: #000;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    #googleToggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 6px 12px;
+      user-select: none;
+    }
+
+    #googleMenu {
+      position: absolute;
+      top: 45px;
+      right: 10px;
+      background: #1c1c1c;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 10px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+      color: #eee;
+    }
+
+    #googleMenu label {
+      font-size: 0.9rem;
+      color: #0ff;
+    }
+
+    #googleMenu select {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 5px;
+      border: 1px solid #333;
+      border-radius: 5px;
+    }
+
+    #googleMenu button {
+      background: var(--color-button);
+      border: none;
+      padding: 6px 10px;
+      border-radius: 5px;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .light-mode #googleMenu,
+    .light-mode #googleMenu select {
+      background: #fff;
+      color: #000;
+    }
+
+    .light-mode #googleToggle {
+      background: #ccc;
+      color: #000;
+    }
+  </style>
+</head>
+  <div id="leftPanel">
+    <div id="greeting">Hey buddy! What code or image do you need?</div>
+
+    <textarea id="inputBox" placeholder="e.g. Make a dancing banana in CSS..."></textarea>
+
+    <div class="ask-box">
+      <button id="uploadBtn" onclick="fileInput.click()">➕</button>
+      <input type="file" id="fileInput" accept="image/*" multiple />
+      <div id="micToggle" class="toggle-switch">
+        <div class="toggle-thumb">
+          <img src="https://img.icons8.com/ios-glyphs/30/mute.png" />
+        </div>
+      </div>
+      <div id="talkToggle" class="toggle-switch">
+        <div class="toggle-thumb">
+          <img src="https://img.icons8.com/ios-glyphs/30/no-audio.png" />
+        </div>
+      </div>
+      <button id="sendBtn" onclick="handleInput()">➡</button>
+    </div>
+
+    <div id="imagePreviewBox"></div>
+    <div id="chatBox"></div>
+
+    <div style="margin-top: 5px; display: flex; justify-content: flex-end;">
+      <button id="copyBtn">📋 Copy Code</button>
+    </div>
+
+    <textarea id="codeEditorBox" placeholder="Boom! Your brilliant code lands here..."></textarea>
+  </div>
+
+  <div id="rightPanel">
+    <div id="googleToggle" onclick="toggleGoogleMenu()">⚙ settings</div>
+    <div id="googleMenu">
+      <label for="languageSelect">🗣 Voice Language:</label>
+      <select id="languageSelect">
+        <option value="en-GB">English UK</option>
+        <option value="en-US">English US</option>
+        <option value="hi-IN">Hindi</option>
+        <option value="ar-SA">Arabic</option>
+        <option value="fr-FR">French</option>
+        <option value="es-ES">Spanish</option>
+      </select>
+
+      <label for="themeToggle">🌓 Theme Mode:</label>
+      <button onclick="toggleTheme()">Toggle Dark/Light</button>
+
+      <!-- Google Sign-In/Out Buttons -->
+      <div id="g_id_onload"
+        data-client_id="351716624019-q6darsmi3lc5sm667elm78rh2tmj9dlt.apps.googleusercontent.com"
+        data-callback="handleCredentialResponse"
+        data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin"
+        data-type="standard"
+        data-shape="rectangular"
+        data-theme="outline"
+        data-text="sign_in_with"
+        data-size="large">
+      </div>
+      <button onclick="signOut()">Sign Out</button>
+    </div>
+
+    <div style="font-size: 1.2rem; font-weight: bold; margin: 60px 0 10px; color: #0ff;">
+      📤 OUTPUT
+    </div>
+    <iframe id="outputBox" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  const inputBox = document.getElementById('inputBox');
+  const codeEditorBox = document.getElementById('codeEditorBox');
+  const outputBox = document.getElementById('outputBox');
+  const chatBox = document.getElementById('chatBox');
+  const micToggle = document.getElementById('micToggle');
+  const talkToggle = document.getElementById('talkToggle');
+  const languageSelect = document.getElementById('languageSelect');
+  const fileInput = document.getElementById('fileInput');
+  const imagePreviewBox = document.getElementById('imagePreviewBox');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const sendBtn = document.getElementById('sendBtn');
+
+  let chatHistory = [];
+  let talkBackEnabled = false;
+  let recognition;
+  let selectedVoice = null;
+  let currentVoiceLang = 'en-GB';
+
+  // Match button sizes
+  [uploadBtn, sendBtn].forEach(btn => {
+    btn.style.width = '40px';
+    btn.style.height = '40px';
+    btn.style.borderRadius = '6px';
+    btn.style.fontSize = '1.2rem';
+  });
+
+  // Google Sign-In
+  function handleCredentialResponse(response) {
+    const jwt = response.credential;
+    const payload = JSON.parse(atob(jwt.split('.')[1]));
+    alert(✅ Signed in as ${payload.name});
+  }
+
+  function signOut() {
+    google.accounts.id.disableAutoSelect();
+    alert("🚪 Signed out successfully.");
+  }
+
+  function toggleGoogleMenu() {
+    const menu = document.getElementById('googleMenu');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle("light-mode");
+  }
+
+  languageSelect.onchange = () => {
+    currentVoiceLang = languageSelect.value;
+    selectedVoice = getVoiceByLang(currentVoiceLang);
+  };
+
+  function getVoiceByLang(lang) {
+    const voices = speechSynthesis.getVoices();
+    return voices.find(v => v.lang === lang && /female|Google/i.test(v.name))
+      || voices.find(v => v.lang === lang)
+      || voices[0];
+  }
+
+  function talkBack(text) {
+    if (!talkBackEnabled || !selectedVoice) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.voice = selectedVoice;
+    utter.pitch = 1.3;
+    utter.rate = 0.95;
+    utter.volume = 1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+  }
+
+  speechSynthesis.onvoiceschanged = () => {
+    selectedVoice = getVoiceByLang(currentVoiceLang);
+  };
+
+  micToggle.onclick = () => {
+    micToggle.classList.toggle("on");
+    micToggle.querySelector("img").src = micToggle.classList.contains("on")
+      ? "https://img.icons8.com/ios-filled/50/microphone.png"
+      : "https://img.icons8.com/ios-glyphs/30/mute.png";
+    micToggle.classList.contains("on") ? startRecognition() : stopRecognition();
+  };
+
+  talkToggle.onclick = () => {
+    talkToggle.classList.toggle("on");
+    talkBackEnabled = talkToggle.classList.contains("on");
+    talkToggle.querySelector("img").src = talkBackEnabled
+      ? "https://img.icons8.com/ios-filled/50/speaker.png"
+      : "https://img.icons8.com/ios-glyphs/30/no-audio.png";
+  };
+
+  // Disable on load
+  micToggle.classList.remove("on");
+  micToggle.querySelector("img").src = "https://img.icons8.com/ios-glyphs/30/mute.png";
+  talkToggle.classList.remove("on");
+  talkToggle.querySelector("img").src = "https://img.icons8.com/ios-glyphs/30/no-audio.png";
+
+  function startRecognition() {
+    if (!('webkitSpeechRecognition' in window)) return;
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = true;
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.onresult = event => {
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+      if (transcript.includes('send message')) {
+        const msg = transcript.replace('send message', '').trim();
+        if (msg.length > 0) inputBox.value = msg;
+        handleInput();
+      } else if (transcript === 'clear chat') {
+        chatBox.innerHTML = '';
+      } else if (transcript === 'copy code') {
+        navigator.clipboard.writeText(codeEditorBox.value);
+      } else if (transcript === 'run output') {
+        updateLivePreview();
+      } else {
+        inputBox.value = transcript;
+      }
+    };
+    recognition.onend = () => {
+      if (micToggle.classList.contains("on")) recognition.start();
+    };
+    recognition.start();
+  }
+
+  function stopRecognition() {
+    if (recognition) recognition.stop();
+  }
+
+  document.getElementById('copyBtn').onclick = () => {
+    navigator.clipboard.writeText(codeEditorBox.value);
+  };
+
+  function playDing() {
+    new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_a2ab4c626f.mp3").play();
+  }
+
+  window.onload = () => {
+    if (speechSynthesis.getVoices().length > 0) {
+      selectedVoice = getVoiceByLang(currentVoiceLang);
+    }
+  };
+</script>
+<script>
+  const API_KEY = "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";
+  const MODELS = {
+    code: "mistral/mixtral-8x7b-instruct",
+    chat: "meta-llama/llama-3-70b-instruct"
+  };
+
+  function handleInput(forcePrompt) {
+    const prompt = forcePrompt || inputBox.value.trim();
+    if (!prompt) return;
+    inputBox.value = '';
+
+    const userMsg = document.createElement('div');
+    userMsg.className = 'chat-message chat-user';
+    userMsg.textContent = prompt;
+    chatBox.appendChild(userMsg);
+
+    askAI(prompt);
+  }
+
+  async function askAI(prompt) {
+    const model = /code|html|css|javascript|python|repair|fix|bug|generate/i.test(prompt)
+      ? MODELS.code
+      : MODELS.chat;
+    chatHistory.push({ role: "user", content: prompt });
+
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": Bearer ${API_KEY}
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: "You are a multilingual helpful code assistant. Return code inside triple backticks." },
+            ...chatHistory
+          ]
+        })
+      });
+
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content;
+      if (!reply) throw new Error("No reply");
+
+      chatHistory.push({ role: "assistant", content: reply });
+      playDing();
+
+      const codeBlock = reply.match(/(?:\w+)?\n([\s\S]*?)/);
+      const codeOnly = codeBlock ? codeBlock[1] : '';
+      const textOnly = reply.replace(/[\s\S]*?/, '').trim();
+
+      if (textOnly) {
+        const botMsg = document.createElement('div');
+        botMsg.className = 'chat-message chat-bot';
+        botMsg.textContent = textOnly;
+        chatBox.appendChild(botMsg);
+        talkBack(textOnly);
+      }
+
+      if (codeOnly) {
+        codeEditorBox.value = codeOnly.trim();
+        updateLivePreview();
+      }
+
+    } catch (err) {
+      const fallback = document.createElement('div');
+      fallback.className = 'chat-message chat-bot';
+      fallback.textContent = "❌ Oops! Something went wrong. Please try again.";
+      chatBox.appendChild(fallback);
+      talkBack("Sorry buddy, I couldn't get a response. Try again?");
+    }
+  }
+
+  function updateLivePreview() {
+    const code = codeEditorBox.value;
+    outputBox.srcdoc = code.includes('<html')
+      ? code
+      : <!DOCTYPE html><html><body><script>${code}<\/script></body></html>;
+  }
+
+  fileInput.onchange = () => {
+    const files = Array.from(fileInput.files);
+    imagePreviewBox.innerHTML = '';
+    files.forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.className = 'preview-img';
+        imagePreviewBox.appendChild(img);
+
+        const chatImg = document.createElement('div');
+        chatImg.className = 'chat-message chat-user';
+        chatImg.innerHTML = <div>🖼 Image uploaded:</div><img src="${e.target.result}" />;
+        chatBox.appendChild(chatImg);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+</script>
+<!-- Load Google Sign-In -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<!-- Google Sign-In auto loader -->
+<div id="g_id_onload"
+     data-client_id="351716624019-q6darsmi3lc5sm667elm78rh2tmj9dlt.apps.googleusercontent.com"
+     data-callback="handleCredentialResponse"
+     data-auto_prompt="false">
+</div>
+
+<!-- Google Sign-In Button (Hidden but triggered) -->
+<div class="g_id_signin"
+     data-type="standard"
+     data-shape="rectangular"
+     data-theme="outline"
+     data-text="sign_in_with"
+     data-size="large"
+     style="display:none">
+</div>
+
+<script>
+  let signedInUser = null;
+
+  function handleCredentialResponse(response) {
+    const jwt = response.credential;
+    const base64Url = jwt.split('.')[1];
+    const decodedData = JSON.parse(atob(base64Url));
+
+    signedInUser = decodedData;
+    alert("✅ Signed in as " + decodedData.name);
+    document.getElementById("googleSignInBtn").style.display = "none";
+    document.getElementById("googleSignOutBtn").style.display = "block";
+  }
+
+  function signOutGoogle() {
+    google.accounts.id.disableAutoSelect();
+    signedInUser = null;
+    alert("🚪 Signed out");
+    document.getElementById("googleSignInBtn").style.display = "block";
+    document.getElementById("googleSignOutBtn").style.display = "none";
+  }
+</script>
+
+<!-- Inside #googleMenu -->
+<script>
+  const menuDiv = document.getElementById("googleMenu");
+  const signInBtn = document.createElement("button");
+  signInBtn.textContent = "🔑 Google Sign In";
+  signInBtn.id = "googleSignInBtn";
+  signInBtn.onclick = () => {
+    google.accounts.id.prompt(); // Manually prompt the sign in
+  };
+
+  const signOutBtn = document.createElement("button");
+  signOutBtn.textContent = "🚪 Sign Out";
+  signOutBtn.id = "googleSignOutBtn";
+  signOutBtn.style.display = "none";
+  signOutBtn.onclick = signOutGoogle;
+
+  menuDiv.appendChild(signInBtn);
+  menuDiv.appendChild(signOutBtn);
+</script>
